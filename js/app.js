@@ -1,40 +1,7 @@
 'use strict';
 
-// ========== 支払方法 ==========
-const DEFAULT_PAYMENTS = ['クレカ', '現金', '電子マネー'];
-
-function loadPayments() {
-  const raw = localStorage.getItem('kakeibo_payments');
-  return raw ? JSON.parse(raw) : [...DEFAULT_PAYMENTS];
-}
-
-function savePayments(list) {
-  localStorage.setItem('kakeibo_payments', JSON.stringify(list));
-}
-
-function renderPaymentSelect() {
-  const sel = document.getElementById('tx-payment');
-  const methods = loadPayments();
-  sel.innerHTML = methods.map(m => `<option value="${m}">${m}</option>`).join('');
-}
-
-function renderPaymentModalList() {
-  const el = document.getElementById('payment-methods-list');
-  const methods = loadPayments();
-  el.innerHTML = '';
-  methods.forEach((m, i) => {
-    const row = document.createElement('div');
-    row.className = 'expense-item';
-    row.innerHTML = `
-      <input type="text" value="${m}" data-payment-index="${i}" style="flex:1;border:1.5px solid #eee;border-radius:8px;padding:7px 10px;font-size:14px;background:#f5f5f5;">
-      <button class="delete-btn" data-payment-index="${i}">×</button>
-    `;
-    el.appendChild(row);
-  });
-}
-
-// ========== デフォルト設定（すぅさんの家計簿から） ==========
-const DEFAULT_FIXED = [
+// ========== デフォルト値 ==========
+var DEFAULT_FIXED = [
   { name: '住宅ローン', amount: 83606 },
   { name: '電気', amount: 13000 },
   { name: '水道', amount: 3500 },
@@ -49,21 +16,21 @@ const DEFAULT_FIXED = [
   { name: '夫おこづかい', amount: 16000 },
 ];
 
-const DEFAULT_SAVINGS = [
+var DEFAULT_SAVINGS = [
   { name: '医療費積立', amount: 3000 },
   { name: 'ありがとう貯金', amount: 3000 },
   { name: 'お米貯金', amount: 0 },
   { name: '特別費貯金', amount: 0 },
 ];
 
-const DEFAULT_WIFE_ALLOCATION = [
+var DEFAULT_WIFE_ALLOC = [
   { name: 'NISA（老後・夫）', amount: 25000 },
   { name: 'iDeCo（老後）', amount: 5000 },
   { name: 'NISA（教育）', amount: 20000 },
   { name: '教育費積立', amount: 15000 },
 ];
 
-const DEFAULT_BUDGETS = [
+var DEFAULT_BUDGETS = [
   { name: '食費', amount: 40000 },
   { name: '日用品費', amount: 5000 },
   { name: 'こども費', amount: 10000 },
@@ -72,739 +39,663 @@ const DEFAULT_BUDGETS = [
   { name: 'ガソリン代', amount: 8000 },
 ];
 
-// ========== 状態管理 ==========
-let currentYear = new Date().getFullYear();
-let currentMonth = new Date().getMonth() + 1;
-let modalMode = ''; // 'fixed' | 'savings'
+var DEFAULT_PAYMENTS = ['クレカ', '現金', '電子マネー'];
 
-// ========== localStorage ユーティリティ ==========
-function storageKey(type, year, month) {
-  return `kakeibo_${type}_${year}_${String(month).padStart(2, '0')}`;
-}
+// ========== 状態 ==========
+var currentYear = new Date().getFullYear();
+var currentMonth = new Date().getMonth() + 1;
+var modalMode = '';
 
-function saveData(type, data) {
-  localStorage.setItem(storageKey(type, currentYear, currentMonth), JSON.stringify(data));
-}
+// ========== ユーティリティ ==========
+function el(id) { return document.getElementById(id); }
 
-function loadData(type, defaultVal = null) {
-  const raw = localStorage.getItem(storageKey(type, currentYear, currentMonth));
-  return raw ? JSON.parse(raw) : defaultVal;
-}
-
-function loadDataForMonth(type, year, month, defaultVal = null) {
-  const key = `kakeibo_${type}_${year}_${String(month).padStart(2, '0')}`;
-  const raw = localStorage.getItem(key);
-  return raw ? JSON.parse(raw) : defaultVal;
-}
-
-// ========== 数値フォーマット ==========
 function fmt(n) {
   return Number(n || 0).toLocaleString('ja-JP') + '円';
 }
 
-function num(id) {
-  var el = document.getElementById(id);
-  return parseInt((el ? el.value : '0') || '0', 10) || 0;
+function numVal(id) {
+  var e = el(id);
+  return e ? (parseInt(e.value, 10) || 0) : 0;
 }
 
-// ========== 月ラベル更新 ==========
+function storageKey(type) {
+  return 'kakeibo_' + type + '_' + currentYear + '_' + (currentMonth < 10 ? '0' + currentMonth : '' + currentMonth);
+}
+
+function saveData(type, data) {
+  localStorage.setItem(storageKey(type), JSON.stringify(data));
+}
+
+function loadData(type, def) {
+  var raw = localStorage.getItem(storageKey(type));
+  return raw ? JSON.parse(raw) : def;
+}
+
+function loadMonth(type, y, m, def) {
+  var key = 'kakeibo_' + type + '_' + y + '_' + (m < 10 ? '0' + m : '' + m);
+  var raw = localStorage.getItem(key);
+  return raw ? JSON.parse(raw) : def;
+}
+
+function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+// ========== 支払方法 ==========
+function loadPayments() {
+  var raw = localStorage.getItem('kakeibo_payments');
+  return raw ? JSON.parse(raw) : clone(DEFAULT_PAYMENTS);
+}
+
+function savePayments(list) {
+  localStorage.setItem('kakeibo_payments', JSON.stringify(list));
+}
+
+function renderPaymentSelect() {
+  var sel = el('tx-payment');
+  if (!sel) return;
+  var methods = loadPayments();
+  var html = '';
+  for (var i = 0; i < methods.length; i++) {
+    html += '<option value="' + methods[i] + '">' + methods[i] + '</option>';
+  }
+  sel.innerHTML = html;
+}
+
+function renderPaymentModalList() {
+  var container = el('payment-methods-list');
+  if (!container) return;
+  var methods = loadPayments();
+  container.innerHTML = '';
+  for (var i = 0; i < methods.length; i++) {
+    var row = document.createElement('div');
+    row.className = 'expense-item';
+    row.innerHTML = '<input type="text" value="' + methods[i] + '" data-pi="' + i + '" style="flex:1;border:1.5px solid #eee;border-radius:8px;padding:7px 10px;font-size:14px;background:#f5f5f5;">' +
+      '<button class="delete-btn" data-pi="' + i + '">×</button>';
+    container.appendChild(row);
+  }
+}
+
+// ========== 月ラベル ==========
 function updateMonthLabel() {
-  document.getElementById('current-month-label').textContent = `${currentYear}年${currentMonth}月`;
-  document.getElementById('header-month').textContent = `${currentYear}年${currentMonth}月`;
+  el('current-month-label').textContent = currentYear + '年' + currentMonth + '月';
+  el('header-month').textContent = currentYear + '年' + currentMonth + '月';
 }
 
 // ========== 給料日ページ ==========
-function initSalaryPage() {
-  const setup = loadData('setup', {
-    income: { husband: 0 },
-    fixed: JSON.parse(JSON.stringify(DEFAULT_FIXED)),
-    savings: JSON.parse(JSON.stringify(DEFAULT_SAVINGS)),
-    budgets: JSON.parse(JSON.stringify(DEFAULT_BUDGETS)),
+function defaultSetup() {
+  return {
+    husband: 0,
+    fixed: clone(DEFAULT_FIXED),
+    savings: clone(DEFAULT_SAVINGS),
+    budgets: clone(DEFAULT_BUDGETS),
     wifeIncome: 0,
-    wifeChildAllowance: 0,
-    wifeAllocation: JSON.parse(JSON.stringify(DEFAULT_WIFE_ALLOCATION)),
-    cashWithdrawal: 0,
-  });
-
-  document.getElementById('income-husband').value = setup.income.husband > 0 ? setup.income.husband : '';
-  document.getElementById('cash-withdrawal').value = setup.cashWithdrawal || '';
-  document.getElementById('wife-income').value = setup.wifeIncome || '';
-  document.getElementById('wife-child-allowance').value = setup.wifeChildAllowance || '';
-
-  renderFixedList(setup.fixed);
-  renderSavingsList(setup.savings);
-  renderBudgetCategories(setup.budgets);
-  renderWifeAllocationList(setup.wifeAllocation);
-  calcSalary(setup);
-  calcWife(setup);
+    wifeChild: 0,
+    wifeAlloc: clone(DEFAULT_WIFE_ALLOC),
+    cash: 0,
+  };
 }
 
-function renderFixedList(items) {
-  const el = document.getElementById('fixed-expenses-list');
-  el.innerHTML = '';
-  items.forEach((item, i) => {
-    el.appendChild(createExpenseItem(item, i, 'fixed'));
-  });
+function initSalaryPage() {
+  var s = loadData('setup', defaultSetup());
+  el('income-husband').value = s.husband > 0 ? s.husband : '';
+  el('cash-withdrawal').value = s.cash > 0 ? s.cash : '';
+  el('wife-income').value = s.wifeIncome > 0 ? s.wifeIncome : '';
+  el('wife-child-allowance').value = s.wifeChild > 0 ? s.wifeChild : '';
+  renderList('fixed-expenses-list', s.fixed, 'fixed');
+  renderList('savings-list', s.savings, 'sav');
+  renderList('budget-categories-list', s.budgets, 'bud');
+  renderList('wife-allocation-list', s.wifeAlloc, 'wife');
+  calcSalary(s);
+  calcWife(s);
 }
 
-function renderSavingsList(items) {
-  const el = document.getElementById('savings-list');
-  el.innerHTML = '';
-  items.forEach((item, i) => {
-    el.appendChild(createExpenseItem(item, i, 'savings'));
-  });
+function renderList(containerId, items, type) {
+  var container = el(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  for (var i = 0; i < items.length; i++) {
+    container.appendChild(makeItem(items[i], i, type));
+  }
 }
 
-function renderBudgetCategories(items) {
-  const el = document.getElementById('budget-categories-list');
-  el.innerHTML = '';
-  items.forEach((item, i) => {
-    el.appendChild(createExpenseItem(item, i, 'budget'));
-  });
-}
-
-function renderWifeAllocationList(items) {
-  const el = document.getElementById('wife-allocation-list');
-  el.innerHTML = '';
-  (items || []).forEach((item, i) => {
-    el.appendChild(createExpenseItem(item, i, 'wife'));
-  });
-}
-
-function calcWife(setup) {
-  if (!setup) setup = getSetupFromDOM();
-  const wifeIncome = parseInt(document.getElementById('wife-income').value, 10) || 0;
-  const childAllowance = parseInt(document.getElementById('wife-child-allowance').value, 10) || 0;
-  const total = wifeIncome + childAllowance;
-  const allocated = (setup.wifeAllocation || []).reduce((a, b) => a + (b.amount || 0), 0);
-  const remaining = total - allocated;
-
-  document.getElementById('wife-total').textContent = fmt(total);
-  document.getElementById('wife-allocated-total').textContent = fmt(allocated);
-  document.getElementById('wife-remaining').textContent = fmt(remaining);
-  document.getElementById('wife-remaining').style.color = remaining < 0 ? 'var(--red)' : 'var(--primary)';
-}
-
-function createExpenseItem(item, index, type) {
-  const div = document.createElement('div');
+function makeItem(item, index, type) {
+  var div = document.createElement('div');
   div.className = 'expense-item';
-  div.innerHTML = `
-    <input type="text" value="${item.name}" placeholder="項目名" data-type="${type}" data-index="${index}" data-field="name">
-    <input type="number" value="${item.amount || ''}" placeholder="0" inputmode="numeric" data-type="${type}" data-index="${index}" data-field="amount">
-    <span class="unit">円</span>
-    <button class="delete-btn" data-type="${type}" data-index="${index}">×</button>
-  `;
+  div.innerHTML =
+    '<input type="text" value="' + (item.name || '') + '" placeholder="項目名" data-t="' + type + '" data-i="' + index + '" data-f="name">' +
+    '<input type="number" value="' + (item.amount || '') + '" placeholder="0" inputmode="numeric" data-t="' + type + '" data-i="' + index + '" data-f="amount">' +
+    '<span class="unit">円</span>' +
+    '<button class="delete-btn" data-t="' + type + '" data-i="' + index + '">×</button>';
   return div;
 }
 
 function getSetupFromDOM() {
-  const setup = loadData('setup', {
-    income: {}, fixed: [], savings: [], budgets: [], wifeAllocation: [], cashWithdrawal: 0
-  });
+  var s = loadData('setup', defaultSetup());
+  s.husband = numVal('income-husband');
+  s.cash = numVal('cash-withdrawal');
+  s.wifeIncome = numVal('wife-income');
+  s.wifeChild = numVal('wife-child-allowance');
 
-  setup.income = { husband: num('income-husband') };
-  setup.cashWithdrawal = num('cash-withdrawal');
-  setup.wifeIncome = parseInt(document.getElementById('wife-income').value, 10) || 0;
-  setup.wifeChildAllowance = parseInt(document.getElementById('wife-child-allowance').value, 10) || 0;
-
-  ['fixed', 'savings', 'budget', 'wife'].forEach(type => {
-    const inputs = document.querySelectorAll(`input[data-type="${type}"]`);
-    const items = {};
-    inputs.forEach(inp => {
-      const idx = inp.dataset.index;
+  var types = ['fixed', 'sav', 'bud', 'wife'];
+  var keys  = ['fixed', 'savings', 'budgets', 'wifeAlloc'];
+  for (var ti = 0; ti < types.length; ti++) {
+    var inputs = document.querySelectorAll('input[data-t="' + types[ti] + '"]');
+    var items = {};
+    for (var ii = 0; ii < inputs.length; ii++) {
+      var inp = inputs[ii];
+      var idx = inp.getAttribute('data-i');
       if (!items[idx]) items[idx] = {};
-      items[idx][inp.dataset.field] = inp.dataset.field === 'amount'
-        ? (parseInt(inp.value, 10) || 0)
-        : inp.value;
-    });
-    const key = type === 'budget' ? 'budgets' : type === 'fixed' ? 'fixed' : type === 'savings' ? 'savings' : 'wifeAllocation';
-    setup[key] = Object.values(items);
-  });
-
-  return setup;
+      if (inp.getAttribute('data-f') === 'amount') {
+        items[idx].amount = parseInt(inp.value, 10) || 0;
+      } else {
+        items[idx].name = inp.value;
+      }
+    }
+    var arr = [];
+    var idxKeys = Object.keys(items);
+    for (var ki = 0; ki < idxKeys.length; ki++) {
+      arr.push(items[idxKeys[ki]]);
+    }
+    s[keys[ti]] = arr;
+  }
+  return s;
 }
 
-function calcSalary(setup) {
-  if (!setup) setup = getSetupFromDOM();
+function calcSalary(s) {
+  if (!s) s = getSetupFromDOM();
+  var totalFixed = 0;
+  for (var i = 0; i < s.fixed.length; i++) totalFixed += (s.fixed[i].amount || 0);
+  var totalSav = 0;
+  for (var i = 0; i < s.savings.length; i++) totalSav += (s.savings[i].amount || 0);
+  var totalBud = 0;
+  for (var i = 0; i < s.budgets.length; i++) totalBud += (s.budgets[i].amount || 0);
+  var husband = s.husband || 0;
+  var yariyakuri = husband - totalFixed - totalSav;
 
-  const totalIncome = Object.values(setup.income).reduce((a, b) => a + (b || 0), 0);
-  const totalFixed = setup.fixed.reduce((a, b) => a + (b.amount || 0), 0);
-  const totalSavings = setup.savings.reduce((a, b) => a + (b.amount || 0), 0);
-  const totalBudget = setup.budgets.reduce((a, b) => a + (b.amount || 0), 0);
-  const husbandIncome = setup.income.husband || 0;
-  const yariyakuri = husbandIncome - totalFixed - totalSavings;
+  el('total-fixed').textContent = fmt(totalFixed);
+  el('total-savings').textContent = fmt(totalSav);
+  el('calc-husband').textContent = fmt(husband);
+  el('calc-fixed').textContent = fmt(totalFixed);
+  el('calc-savings').textContent = fmt(totalSav);
+  el('calc-budget').textContent = fmt(yariyakuri);
+  el('total-budget-categories').textContent = fmt(totalBud);
 
-  document.getElementById('total-fixed').textContent = fmt(totalFixed);
-  document.getElementById('total-savings').textContent = fmt(totalSavings);
-  document.getElementById('calc-husband').textContent = fmt(husbandIncome);
-  document.getElementById('calc-fixed').textContent = fmt(totalFixed);
-  document.getElementById('calc-savings').textContent = fmt(totalSavings);
-  document.getElementById('calc-budget').textContent = fmt(yariyakuri);
-  document.getElementById('total-budget-categories').textContent = fmt(totalBudget);
-
-  const diff = yariyakuri - totalBudget;
-  const notice = document.getElementById('budget-remaining-notice');
+  var diff = yariyakuri - totalBud;
+  var notice = el('budget-remaining-notice');
   if (yariyakuri <= 0) {
     notice.textContent = '';
     notice.className = 'remaining-notice';
   } else if (diff >= 0) {
-    notice.textContent = `内訳の合計がやりくり費より ${fmt(diff)} 少ないです`;
+    notice.textContent = '内訳の合計がやりくり費より ' + fmt(diff) + ' 少ないです';
     notice.className = 'remaining-notice ok';
   } else {
-    notice.textContent = `内訳の合計がやりくり費より ${fmt(Math.abs(diff))} 多いです`;
+    notice.textContent = '内訳の合計がやりくり費より ' + fmt(Math.abs(diff)) + ' 多いです';
     notice.className = 'remaining-notice over';
   }
 }
 
+function calcWife(s) {
+  if (!s) s = getSetupFromDOM();
+  var wifeIncome = numVal('wife-income');
+  var wifeChild  = numVal('wife-child-allowance');
+  var total = wifeIncome + wifeChild;
+  var allocated = 0;
+  for (var i = 0; i < s.wifeAlloc.length; i++) allocated += (s.wifeAlloc[i].amount || 0);
+  var remaining = total - allocated;
+  el('wife-total').textContent = fmt(total);
+  el('wife-allocated-total').textContent = fmt(allocated);
+  el('wife-remaining').textContent = fmt(remaining);
+  el('wife-remaining').style.color = remaining < 0 ? 'var(--red)' : 'var(--primary)';
+}
+
 // ========== やりくりページ ==========
 function initSpendingPage() {
-  const setup = loadData('setup', null);
-  const txs = loadData('transactions', []);
+  var s = loadData('setup', defaultSetup());
+  var txs = loadData('transactions', []);
 
-  // 日付を今日に
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  const dd = String(today.getDate()).padStart(2, '0');
-  document.getElementById('tx-date').value = `${yyyy}-${mm}-${dd}`;
+  var today = new Date();
+  var mm = today.getMonth() + 1;
+  var dd = today.getDate();
+  el('tx-date').value = today.getFullYear() + '-' + (mm < 10 ? '0' + mm : mm) + '-' + (dd < 10 ? '0' + dd : dd);
 
-  // カテゴリ選択
-  const sel = document.getElementById('tx-category');
+  var sel = el('tx-category');
   sel.innerHTML = '';
-  const cats = (setup && setup.budgets) || DEFAULT_BUDGETS;
-  cats.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.name;
-    opt.textContent = c.name;
-    sel.appendChild(opt);
-  });
+  var cats = s.budgets || DEFAULT_BUDGETS;
+  for (var i = 0; i < cats.length; i++) {
+    sel.innerHTML += '<option value="' + cats[i].name + '">' + cats[i].name + '</option>';
+  }
 
-  // 支払方法
   renderPaymentSelect();
-
-  renderCategorySummary(setup, txs);
+  renderCategorySummary(s, txs);
   renderTxList(txs);
 }
 
-function renderCategorySummary(setup, txs) {
-  const el = document.getElementById('category-summary');
-  el.innerHTML = '';
-  const cats = (setup && setup.budgets) || DEFAULT_BUDGETS;
-
-  cats.forEach(cat => {
-    const spent = txs
-      .filter(t => t.category === cat.name)
-      .reduce((a, t) => a + t.amount, 0);
-    const budget = cat.amount;
-    const remaining = budget - spent;
-    const pct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
-    const status = pct >= 100 ? 'danger' : pct >= 80 ? 'warning' : 'ok';
-
-    const div = document.createElement('div');
+function renderCategorySummary(s, txs) {
+  var container = el('category-summary');
+  container.innerHTML = '';
+  var cats = s.budgets || DEFAULT_BUDGETS;
+  for (var i = 0; i < cats.length; i++) {
+    var cat = cats[i];
+    var spent = 0;
+    for (var j = 0; j < txs.length; j++) {
+      if (txs[j].category === cat.name) spent += txs[j].amount;
+    }
+    var remaining = cat.amount - spent;
+    var pct = cat.amount > 0 ? Math.min(Math.round(spent / cat.amount * 100), 100) : 0;
+    var status = pct >= 100 ? 'danger' : pct >= 80 ? 'warning' : 'ok';
+    var div = document.createElement('div');
     div.className = 'category-card';
-    div.innerHTML = `
-      <div class="category-header">
-        <span class="category-name">${cat.name}</span>
-        <span class="category-remaining ${status}">残 ${fmt(remaining)}</span>
-      </div>
-      <div class="progress-bar">
-        <div class="progress-fill ${status}" style="width:${pct}%"></div>
-      </div>
-      <div class="category-detail">
-        <span>使用 ${fmt(spent)}</span>
-        <span>予算 ${fmt(budget)}</span>
-      </div>
-    `;
-    el.appendChild(div);
-  });
+    div.innerHTML =
+      '<div class="category-header">' +
+        '<span class="category-name">' + cat.name + '</span>' +
+        '<span class="category-remaining ' + status + '">残 ' + fmt(remaining) + '</span>' +
+      '</div>' +
+      '<div class="progress-bar"><div class="progress-fill ' + status + '" style="width:' + pct + '%"></div></div>' +
+      '<div class="category-detail"><span>使用 ' + fmt(spent) + '</span><span>予算 ' + fmt(cat.amount) + '</span></div>';
+    container.appendChild(div);
+  }
 }
 
 function renderTxList(txs) {
-  const el = document.getElementById('tx-list');
-  el.innerHTML = '';
-
+  var container = el('tx-list');
+  container.innerHTML = '';
   if (txs.length === 0) {
-    el.innerHTML = '<p class="empty-message">まだ支出がありません</p>';
+    container.innerHTML = '<p class="empty-message">まだ支出がありません</p>';
     return;
   }
-
-  const sorted = [...txs].sort((a, b) => b.date.localeCompare(a.date));
-  sorted.forEach(tx => {
-    const div = document.createElement('div');
+  var sorted = txs.slice().sort(function(a, b) { return b.date < a.date ? -1 : 1; });
+  for (var i = 0; i < sorted.length; i++) {
+    var tx = sorted[i];
+    var div = document.createElement('div');
     div.className = 'tx-item';
-    div.innerHTML = `
-      <span class="tx-category-badge">${tx.category}</span>
-      <div class="tx-info">
-        <div class="tx-store">${tx.store || '（店舗名なし）'}</div>
-        <div class="tx-meta">${tx.date} · ${tx.payment}</div>
-      </div>
-      <span class="tx-amount">-${fmt(tx.amount)}</span>
-      <button class="tx-delete" data-id="${tx.id}">×</button>
-    `;
-    el.appendChild(div);
-  });
+    div.innerHTML =
+      '<span class="tx-category-badge">' + tx.category + '</span>' +
+      '<div class="tx-info">' +
+        '<div class="tx-store">' + (tx.store || '（店舗名なし）') + '</div>' +
+        '<div class="tx-meta">' + tx.date + ' · ' + tx.payment + '</div>' +
+      '</div>' +
+      '<span class="tx-amount">-' + fmt(tx.amount) + '</span>' +
+      '<button class="tx-delete" data-id="' + tx.id + '">×</button>';
+    container.appendChild(div);
+  }
 }
 
 function addTransaction() {
-  const date = document.getElementById('tx-date').value;
-  const category = document.getElementById('tx-category').value;
-  const store = document.getElementById('tx-store').value.trim();
-  const payment = document.getElementById('tx-payment').value;
-  const amount = parseInt(document.getElementById('tx-amount').value, 10) || 0;
-
-  if (!date || !category || amount <= 0) {
-    alert('日付・カテゴリ・金額を入力してください');
-    return;
-  }
-
-  const txs = loadData('transactions', []);
-  txs.push({
-    id: Date.now().toString(),
-    date, category, store, payment, amount
-  });
+  var date     = el('tx-date').value;
+  var category = el('tx-category').value;
+  var store    = el('tx-store').value.trim();
+  var payment  = el('tx-payment').value;
+  var amount   = parseInt(el('tx-amount').value, 10) || 0;
+  if (!date || !category || amount <= 0) { alert('日付・カテゴリ・金額を入力してください'); return; }
+  var txs = loadData('transactions', []);
+  txs.push({ id: '' + Date.now(), date: date, category: category, store: store, payment: payment, amount: amount });
   saveData('transactions', txs);
-
-  document.getElementById('tx-amount').value = '';
-  document.getElementById('tx-store').value = '';
-
-  const setup = loadData('setup', null);
-  renderCategorySummary(setup, txs);
+  el('tx-amount').value = '';
+  el('tx-store').value = '';
+  var s = loadData('setup', defaultSetup());
+  renderCategorySummary(s, txs);
   renderTxList(txs);
 }
 
 function deleteTransaction(id) {
-  let txs = loadData('transactions', []);
-  txs = txs.filter(t => t.id !== id);
-  saveData('transactions', txs);
-  const setup = loadData('setup', null);
-  renderCategorySummary(setup, txs);
-  renderTxList(txs);
+  var txs = loadData('transactions', []);
+  var newTxs = [];
+  for (var i = 0; i < txs.length; i++) { if (txs[i].id !== id) newTxs.push(txs[i]); }
+  saveData('transactions', newTxs);
+  var s = loadData('setup', defaultSetup());
+  renderCategorySummary(s, newTxs);
+  renderTxList(newTxs);
 }
 
 // ========== 月次ページ ==========
 function initMonthlyPage() {
-  const setup = loadData('setup', null);
-  const txs = loadData('transactions', []);
-  const el = document.getElementById('monthly-summary');
-  const el2 = document.getElementById('monthly-categories');
-  el.innerHTML = '';
-  el2.innerHTML = '';
+  var s   = loadData('setup', null);
+  var txs = loadData('transactions', []);
+  var el1 = el('monthly-summary');
+  var el2 = el('monthly-categories');
+  var el3 = el('monthly-payments');
+  el1.innerHTML = ''; el2.innerHTML = ''; el3.innerHTML = '';
 
-  if (!setup) {
-    el.innerHTML = '<p class="empty-message">先に給料日ページで予算を設定してください</p>';
-    return;
+  if (!s) { el1.innerHTML = '<p class="empty-message">先に給料日ページで予算を保存してください</p>'; return; }
+
+  var totalFixed = 0;
+  for (var i = 0; i < s.fixed.length; i++) totalFixed += (s.fixed[i].amount || 0);
+  var totalSav = 0;
+  for (var i = 0; i < s.savings.length; i++) totalSav += (s.savings[i].amount || 0);
+  var totalSpent = 0;
+  for (var i = 0; i < txs.length; i++) totalSpent += txs[i].amount;
+  var saving = s.husband - totalFixed - totalSav - totalSpent;
+
+  var rows = [['収入（夫の給与）', s.husband], ['固定費', totalFixed], ['やりくり費（実績）', totalSpent], ['先取り貯金', totalSav]];
+  for (var i = 0; i < rows.length; i++) {
+    var d = document.createElement('div');
+    d.className = 'summary-row';
+    d.innerHTML = '<span>' + rows[i][0] + '</span><span>' + fmt(rows[i][1]) + '</span>';
+    el1.appendChild(d);
+  }
+  var savDiv = document.createElement('div');
+  savDiv.className = 'summary-row saving';
+  savDiv.innerHTML = '<span>💰 今月の貯蓄（推計）</span><span>' + fmt(saving) + '</span>';
+  el1.appendChild(savDiv);
+
+  var cats = s.budgets || DEFAULT_BUDGETS;
+  for (var i = 0; i < cats.length; i++) {
+    var spent = 0;
+    for (var j = 0; j < txs.length; j++) { if (txs[j].category === cats[i].name) spent += txs[j].amount; }
+    var diff = cats[i].amount - spent;
+    var d = document.createElement('div');
+    d.className = 'budget-vs-actual';
+    d.innerHTML = '<div class="bva-header"><span class="bva-name">' + cats[i].name + '</span>' +
+      '<span class="bva-numbers ' + (diff < 0 ? 'bva-over' : 'bva-under') + '">' + (diff < 0 ? '▲' : '▼') + ' ' + fmt(Math.abs(diff)) + '</span></div>' +
+      '<div class="bva-numbers">予算 ' + fmt(cats[i].amount) + ' → 実績 ' + fmt(spent) + '</div>';
+    el2.appendChild(d);
   }
 
-  const totalIncome = Object.values(setup.income).reduce((a, b) => a + (b || 0), 0);
-  const totalFixed = setup.fixed.reduce((a, b) => a + (b.amount || 0), 0);
-  const totalSpent = txs.reduce((a, t) => a + t.amount, 0);
-  const totalSavings = setup.savings.reduce((a, b) => a + (b.amount || 0), 0);
-  const saving = totalIncome - totalFixed - totalSpent - totalSavings;
-
-  const rows = [
-    ['収入合計', totalIncome],
-    ['固定費', totalFixed],
-    ['やりくり費（実績）', totalSpent],
-    ['先取り貯金', totalSavings],
-  ];
-
-  rows.forEach(([label, val]) => {
-    const div = document.createElement('div');
-    div.className = 'summary-row';
-    div.innerHTML = `<span>${label}</span><span>${fmt(val)}</span>`;
-    el.appendChild(div);
-  });
-
-  const savingDiv = document.createElement('div');
-  savingDiv.className = 'summary-row saving';
-  savingDiv.innerHTML = `<span>💰 今月の貯蓄（推計）</span><span>${fmt(saving)}</span>`;
-  el.appendChild(savingDiv);
-
-  // カテゴリ別
-  const cats = setup.budgets || DEFAULT_BUDGETS;
-  cats.forEach(cat => {
-    const spent = txs.filter(t => t.category === cat.name).reduce((a, t) => a + t.amount, 0);
-    const diff = cat.amount - spent;
-    const isOver = diff < 0;
-    const div = document.createElement('div');
-    div.className = 'budget-vs-actual';
-    div.innerHTML = `
-      <div class="bva-header">
-        <span class="bva-name">${cat.name}</span>
-        <span class="bva-numbers ${isOver ? 'bva-over' : 'bva-under'}">
-          ${isOver ? '▲' : '▼'} ${fmt(Math.abs(diff))}
-        </span>
-      </div>
-      <div class="bva-numbers">予算 ${fmt(cat.amount)} → 実績 ${fmt(spent)}</div>
-    `;
-    el2.appendChild(div);
-  });
-
-  // 支払方法別集計
-  const el3 = document.getElementById('monthly-payments');
-  el3.innerHTML = '';
-  if (txs.length === 0) {
-    el3.innerHTML = '<p class="empty-message">まだ支出がありません</p>';
-  } else {
-    const paymentTotals = {};
-    txs.forEach(t => {
-      paymentTotals[t.payment] = (paymentTotals[t.payment] || 0) + t.amount;
-    });
-    const grandTotal = txs.reduce((a, t) => a + t.amount, 0);
-    Object.entries(paymentTotals)
-      .sort((a, b) => b[1] - a[1])
-      .forEach(([method, total]) => {
-        const pct = Math.round((total / grandTotal) * 100);
-        const div = document.createElement('div');
-        div.className = 'payment-summary-row';
-        div.innerHTML = `
-          <div class="payment-summary-header">
-            <span class="payment-badge">${method}</span>
-            <span class="payment-amount">${fmt(total)}</span>
-            <span class="payment-pct">${pct}%</span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill ok" style="width:${pct}%"></div>
-          </div>
-        `;
-        el3.appendChild(div);
-      });
-    const totalRow = document.createElement('div');
-    totalRow.className = 'summary-row total';
-    totalRow.innerHTML = `<span>合計</span><span>${fmt(grandTotal)}</span>`;
-    el3.appendChild(totalRow);
+  if (txs.length === 0) { el3.innerHTML = '<p class="empty-message">まだ支出がありません</p>'; return; }
+  var payTotals = {};
+  for (var i = 0; i < txs.length; i++) {
+    payTotals[txs[i].payment] = (payTotals[txs[i].payment] || 0) + txs[i].amount;
   }
+  var grandTotal = totalSpent;
+  var methods = Object.keys(payTotals).sort(function(a, b) { return payTotals[b] - payTotals[a]; });
+  for (var i = 0; i < methods.length; i++) {
+    var pct = Math.round(payTotals[methods[i]] / grandTotal * 100);
+    var d = document.createElement('div');
+    d.className = 'payment-summary-row';
+    d.innerHTML = '<div class="payment-summary-header"><span class="payment-badge">' + methods[i] + '</span>' +
+      '<span class="payment-amount">' + fmt(payTotals[methods[i]]) + '</span><span class="payment-pct">' + pct + '%</span></div>' +
+      '<div class="progress-bar"><div class="progress-fill ok" style="width:' + pct + '%"></div></div>';
+    el3.appendChild(d);
+  }
+  var tot = document.createElement('div');
+  tot.className = 'summary-row total';
+  tot.innerHTML = '<span>合計</span><span>' + fmt(grandTotal) + '</span>';
+  el3.appendChild(tot);
 }
 
 // ========== 年間ページ ==========
 function initAnnualPage() {
-  const el = document.getElementById('annual-summary');
-  const el2 = document.getElementById('annual-savings');
-  el.innerHTML = '';
-  el2.innerHTML = '';
+  var container = el('annual-summary');
+  var container2 = el('annual-savings');
+  container.innerHTML = ''; container2.innerHTML = '';
 
-  const months = [];
-  for (let m = 1; m <= 12; m++) {
-    const setup = loadDataForMonth('setup', currentYear, m, null);
-    const txs = loadDataForMonth('transactions', currentYear, m, []);
-
-    if (!setup) {
-      months.push({ month: m, income: 0, expense: 0, saving: 0, hasData: false });
-      continue;
-    }
-
-    const totalIncome = Object.values(setup.income).reduce((a, b) => a + (b || 0), 0);
-    const totalFixed = setup.fixed.reduce((a, b) => a + (b.amount || 0), 0);
-    const totalSpent = txs.reduce((a, t) => a + t.amount, 0);
-    const totalSavings = setup.savings.reduce((a, b) => a + (b.amount || 0), 0);
-    const saving = totalIncome - totalFixed - totalSpent - totalSavings;
-
-    months.push({
-      month: m,
-      income: totalIncome,
-      expense: totalFixed + totalSpent,
-      saving,
-      hasData: true,
-    });
+  var months = [];
+  var maxSaving = 1;
+  for (var m = 1; m <= 12; m++) {
+    var s   = loadMonth('setup', currentYear, m, null);
+    var txs = loadMonth('transactions', currentYear, m, []);
+    if (!s) { months.push({ m: m, income: 0, expense: 0, saving: 0, has: false }); continue; }
+    var totalFixed = 0; for (var i = 0; i < s.fixed.length; i++) totalFixed += (s.fixed[i].amount || 0);
+    var totalSav = 0; for (var i = 0; i < s.savings.length; i++) totalSav += (s.savings[i].amount || 0);
+    var spent = 0; for (var i = 0; i < txs.length; i++) spent += txs[i].amount;
+    var saving = s.husband - totalFixed - totalSav - spent;
+    if (saving > maxSaving) maxSaving = saving;
+    months.push({ m: m, income: s.husband, expense: totalFixed + spent, saving: saving, has: true });
   }
 
-  // ヘッダー
-  const header = document.createElement('div');
+  var header = document.createElement('div');
   header.className = 'annual-month-row';
-  header.innerHTML = `
-    <span class="annual-month" style="font-weight:700">月</span>
-    <span class="annual-income" style="font-weight:700;color:#333">収入</span>
-    <span class="annual-expense" style="font-weight:700;color:#333">支出</span>
-    <span class="annual-saving" style="font-weight:700;color:#333">貯蓄</span>
-  `;
-  el.appendChild(header);
+  header.innerHTML = '<span class="annual-month" style="font-weight:700">月</span>' +
+    '<span class="annual-income" style="font-weight:700;color:#333">収入</span>' +
+    '<span class="annual-expense" style="font-weight:700;color:#333">支出</span>' +
+    '<span class="annual-saving" style="font-weight:700;color:#333">貯蓄</span>';
+  container.appendChild(header);
 
-  let totalIncome = 0, totalExpense = 0, totalSaving = 0;
-  const maxSaving = Math.max(...months.map(m => m.saving), 1);
-
-  months.forEach(m => {
-    const row = document.createElement('div');
+  var totalSaving = 0;
+  for (var i = 0; i < months.length; i++) {
+    var mo = months[i];
+    var row = document.createElement('div');
     row.className = 'annual-month-row';
-    if (!m.hasData) {
-      row.innerHTML = `
-        <span class="annual-month">${m.month}月</span>
-        <span class="annual-income" style="color:#ccc">－</span>
-        <span class="annual-expense" style="color:#ccc">－</span>
-        <span class="annual-saving" style="color:#ccc">－</span>
-      `;
+    if (!mo.has) {
+      row.innerHTML = '<span class="annual-month">' + mo.m + '月</span>' +
+        '<span class="annual-income" style="color:#ccc">－</span>' +
+        '<span class="annual-expense" style="color:#ccc">－</span>' +
+        '<span class="annual-saving" style="color:#ccc">－</span>';
     } else {
-      totalIncome += m.income;
-      totalExpense += m.expense;
-      totalSaving += m.saving;
-      row.innerHTML = `
-        <span class="annual-month">${m.month}月</span>
-        <span class="annual-income">${(m.income / 10000).toFixed(1)}万</span>
-        <span class="annual-expense">${(m.expense / 10000).toFixed(1)}万</span>
-        <span class="annual-saving">${(m.saving / 10000).toFixed(1)}万</span>
-      `;
-    }
-    el.appendChild(row);
-
-    // 棒グラフ
-    if (m.hasData) {
-      const barRow = document.createElement('div');
+      totalSaving += mo.saving;
+      row.innerHTML = '<span class="annual-month">' + mo.m + '月</span>' +
+        '<span class="annual-income">' + (mo.income / 10000).toFixed(1) + '万</span>' +
+        '<span class="annual-expense">' + (mo.expense / 10000).toFixed(1) + '万</span>' +
+        '<span class="annual-saving">' + (mo.saving / 10000).toFixed(1) + '万</span>';
+      var barRow = document.createElement('div');
       barRow.className = 'saving-bar-row';
-      const pct = Math.max((m.saving / maxSaving) * 100, 0);
-      barRow.innerHTML = `
-        <span class="saving-bar-label">${m.month}月</span>
-        <div class="saving-bar"><div class="saving-bar-fill" style="width:${pct}%"></div></div>
-        <span class="saving-bar-amount">${fmt(m.saving)}</span>
-      `;
-      el2.appendChild(barRow);
+      var pct = Math.max(Math.round(mo.saving / maxSaving * 100), 0);
+      barRow.innerHTML = '<span class="saving-bar-label">' + mo.m + '月</span>' +
+        '<div class="saving-bar"><div class="saving-bar-fill" style="width:' + pct + '%"></div></div>' +
+        '<span class="saving-bar-amount">' + fmt(mo.saving) + '</span>';
+      container2.appendChild(barRow);
     }
-  });
+    container.appendChild(row);
+  }
 
-  const totalRow = document.createElement('div');
-  totalRow.className = 'annual-total-row';
-  totalRow.innerHTML = `
-    <span>年間合計</span>
-    <span style="color:var(--green)">貯蓄 ${fmt(totalSaving)}</span>
-  `;
-  el.appendChild(totalRow);
+  var totRow = document.createElement('div');
+  totRow.className = 'annual-total-row';
+  totRow.innerHTML = '<span>年間合計</span><span style="color:var(--green)">貯蓄 ' + fmt(totalSaving) + '</span>';
+  container.appendChild(totRow);
 }
 
 // ========== ナビゲーション ==========
-function switchPage(pageName) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  var pageEl = document.getElementById('page-' + pageName);
+function switchPage(name) {
+  var pages = document.querySelectorAll('.page');
+  for (var i = 0; i < pages.length; i++) pages[i].classList.remove('active');
+  var navBtns = document.querySelectorAll('.nav-btn');
+  for (var i = 0; i < navBtns.length; i++) navBtns[i].classList.remove('active');
+
+  var pageEl = el('page-' + name);
   if (pageEl) pageEl.classList.add('active');
-  var navEl = document.querySelector('.nav-btn[data-page="' + pageName + '"]');
+  var navEl = document.querySelector('.nav-btn[data-page="' + name + '"]');
   if (navEl) navEl.classList.add('active');
 
-  document.getElementById('header-title').textContent = {
-    salary: '💰 給料日の設定',
-    spending: '📝 やりくり家計簿',
-    monthly: '📅 月次まとめ',
-    annual: '🗓️ 年間収支',
-  }[pageName] || 'すぅの家計簿';
+  var titles = { salary: '💰 給料日の設定', spending: '📝 やりくり家計簿', monthly: '📅 月次まとめ', annual: '🗓️ 年間収支' };
+  el('header-title').textContent = titles[name] || 'すぅの家計簿';
 
-  if (pageName === 'salary') initSalaryPage();
-  if (pageName === 'spending') initSpendingPage();
-  if (pageName === 'monthly') initMonthlyPage();
-  if (pageName === 'annual') initAnnualPage();
+  if (name === 'salary')   initSalaryPage();
+  if (name === 'spending') initSpendingPage();
+  if (name === 'monthly')  initMonthlyPage();
+  if (name === 'annual')   initAnnualPage();
 }
 
-// ========== イベントリスナー ==========
-document.addEventListener('DOMContentLoaded', () => {
-  updateMonthLabel();
-  initSalaryPage();
+// ========== モーダル ==========
+function openModal(mode) {
+  modalMode = mode;
+  var titles = { fixed: '固定費を追加', sav: '先取り貯金を追加', bud: 'やりくり費の内訳を追加', wife: '妻の振り分け先を追加' };
+  el('modal-title').textContent = titles[mode] || '追加';
+  el('modal-name').value = '';
+  el('modal-amount').value = '';
+  el('modal-overlay').classList.add('open');
+}
 
-  // ナビゲーション
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchPage(btn.dataset.page));
-  });
-
-  // 月切り替え
-  document.getElementById('prev-month').addEventListener('click', () => {
-    currentMonth--;
-    if (currentMonth < 1) { currentMonth = 12; currentYear--; }
-    updateMonthLabel();
-    initSalaryPage();
-  });
-
-  document.getElementById('next-month').addEventListener('click', () => {
-    currentMonth++;
-    if (currentMonth > 12) { currentMonth = 1; currentYear++; }
-    updateMonthLabel();
-    initSalaryPage();
-  });
-
-  // 収入入力で自動計算
-  document.getElementById('income-husband').addEventListener('input', () => calcSalary(getSetupFromDOM()));
-
-  // 固定費・貯金の入力で自動計算
-  document.getElementById('fixed-expenses-list').addEventListener('input', () => calcSalary(getSetupFromDOM()));
-  document.getElementById('savings-list').addEventListener('input', () => calcSalary(getSetupFromDOM()));
-  document.getElementById('budget-categories-list').addEventListener('input', () => calcSalary(getSetupFromDOM()));
-  document.getElementById('wife-allocation-list').addEventListener('input', () => calcWife(getSetupFromDOM()));
-  document.getElementById('wife-income').addEventListener('input', () => calcWife(getSetupFromDOM()));
-  document.getElementById('wife-child-allowance').addEventListener('input', () => calcWife(getSetupFromDOM()));
-
-  // 削除ボタン
-  document.querySelector('.app-main').addEventListener('click', e => {
-    if (e.target.classList.contains('delete-btn')) {
-      const { type, index } = e.target.dataset;
-      const setup = getSetupFromDOM();
-      const key = type === 'budget' ? 'budgets' : type === 'fixed' ? 'fixed' : type === 'savings' ? 'savings' : 'wifeAllocation';
-      if (setup[key]) setup[key].splice(parseInt(index, 10), 1);
-      saveData('setup', setup);
-      initSalaryPage();
-    }
-    if (e.target.classList.contains('tx-delete')) {
-      deleteTransaction(e.target.dataset.id);
-    }
-  });
-
-  // 項目追加モーダル
-  document.getElementById('add-fixed-btn').addEventListener('click', () => openModal('fixed'));
-  document.getElementById('add-savings-btn').addEventListener('click', () => openModal('savings'));
-  document.getElementById('add-budget-btn').addEventListener('click', () => openModal('budget'));
-  document.getElementById('add-wife-allocation-btn').addEventListener('click', () => openModal('wife'));
-  document.getElementById('modal-cancel').addEventListener('click', closeModal);
-  document.getElementById('modal-overlay').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeModal();
-  });
-  document.getElementById('modal-save').addEventListener('click', () => {
-    const name = document.getElementById('modal-name').value.trim();
-    const amount = parseInt(document.getElementById('modal-amount').value, 10) || 0;
-    if (!name) { alert('項目名を入力してください'); return; }
-    const setup = getSetupFromDOM();
-    const key = modalMode === 'fixed' ? 'fixed' :
-      modalMode === 'savings' ? 'savings' :
-      modalMode === 'wife' ? 'wifeAllocation' : 'budgets';
-    if (!setup[key]) setup[key] = [];
-    setup[key].push({ name, amount });
-    saveData('setup', setup);
-    closeModal();
-    initSalaryPage();
-  });
-
-  // 給料日保存
-  document.getElementById('save-salary-btn').addEventListener('click', () => {
-    const setup = getSetupFromDOM();
-    saveData('setup', setup);
-    const notice = document.getElementById('save-notice');
-    notice.textContent = '✅ 保存しました！';
-    setTimeout(() => notice.textContent = '', 2000);
-  });
-
-  // 支出追加
-  document.getElementById('add-tx-btn').addEventListener('click', addTransaction);
-
-  // エクスポート
-  document.getElementById('export-btn').addEventListener('click', () => {
-    document.getElementById('export-text').value = exportData();
-    document.getElementById('export-modal-overlay').classList.add('open');
-  });
-
-  document.getElementById('export-copy-btn').addEventListener('click', () => {
-    const text = document.getElementById('export-text');
-    text.select();
-    navigator.clipboard.writeText(text.value).then(() => {
-      document.getElementById('export-copy-btn').textContent = '✅ コピーしました';
-      setTimeout(() => {
-        document.getElementById('export-copy-btn').textContent = 'コピーする';
-      }, 2000);
-    });
-  });
-
-  document.getElementById('export-close-btn').addEventListener('click', () => {
-    document.getElementById('export-modal-overlay').classList.remove('open');
-  });
-
-  // インポート
-  document.getElementById('import-btn').addEventListener('click', () => {
-    document.getElementById('import-text').value = '';
-    document.getElementById('import-modal-overlay').classList.add('open');
-  });
-
-  document.getElementById('import-cancel-btn').addEventListener('click', () => {
-    document.getElementById('import-modal-overlay').classList.remove('open');
-  });
-
-  document.getElementById('import-confirm-btn').addEventListener('click', () => {
-    const text = document.getElementById('import-text').value.trim();
-    if (!text) { alert('データを貼り付けてください'); return; }
-    const ok = importData(text);
-    if (ok) {
-      document.getElementById('import-modal-overlay').classList.remove('open');
-      alert('✅ 読み込みが完了しました！');
-      initSalaryPage();
-    } else {
-      alert('データの形式が正しくありません');
-    }
-  });
-
-  // 支払方法編集
-  document.getElementById('edit-payment-btn').addEventListener('click', () => {
-    renderPaymentModalList();
-    document.getElementById('payment-modal-overlay').classList.add('open');
-  });
-
-  document.getElementById('payment-modal-close').addEventListener('click', () => {
-    document.getElementById('payment-modal-overlay').classList.remove('open');
-    renderPaymentSelect();
-  });
-
-  document.getElementById('payment-modal-overlay').addEventListener('click', e => {
-    if (e.target === e.currentTarget) {
-      document.getElementById('payment-modal-overlay').classList.remove('open');
-      renderPaymentSelect();
-    }
-  });
-
-  document.getElementById('add-payment-confirm').addEventListener('click', () => {
-    const input = document.getElementById('new-payment-input');
-    const name = input.value.trim();
-    if (!name) return;
-    const methods = loadPayments();
-    methods.push(name);
-    savePayments(methods);
-    input.value = '';
-    renderPaymentModalList();
-  });
-
-  document.getElementById('payment-methods-list').addEventListener('input', e => {
-    if (e.target.dataset.paymentIndex !== undefined) {
-      const methods = loadPayments();
-      methods[parseInt(e.target.dataset.paymentIndex)] = e.target.value;
-      savePayments(methods);
-    }
-  });
-
-  document.getElementById('payment-methods-list').addEventListener('click', e => {
-    if (e.target.classList.contains('delete-btn') && e.target.dataset.paymentIndex !== undefined) {
-      const methods = loadPayments();
-      methods.splice(parseInt(e.target.dataset.paymentIndex), 1);
-      savePayments(methods);
-      renderPaymentModalList();
-    }
-  });
-});
+function closeModal() { el('modal-overlay').classList.remove('open'); }
 
 // ========== エクスポート・インポート ==========
 function exportData() {
-  const data = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key.startsWith('kakeibo_')) {
+  var data = {};
+  for (var i = 0; i < localStorage.length; i++) {
+    var key = localStorage.key(i);
+    if (key && key.indexOf('kakeibo_') === 0) {
       data[key] = JSON.parse(localStorage.getItem(key));
     }
   }
   return JSON.stringify(data);
 }
 
-function importData(jsonStr) {
+function importData(str) {
   try {
-    const data = JSON.parse(jsonStr);
-    Object.entries(data).forEach(([key, val]) => {
-      if (key.startsWith('kakeibo_')) {
-        localStorage.setItem(key, JSON.stringify(val));
+    var data = JSON.parse(str);
+    var keys = Object.keys(data);
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i].indexOf('kakeibo_') === 0) {
+        localStorage.setItem(keys[i], JSON.stringify(data[keys[i]]));
       }
-    });
+    }
     return true;
-  } catch(e) {
+  } catch (e) {
     return false;
   }
 }
 
-function openModal(mode) {
-  modalMode = mode;
-  document.getElementById('modal-title').textContent =
-    mode === 'fixed' ? '固定費を追加' :
-    mode === 'savings' ? '先取り貯金を追加' :
-    mode === 'wife' ? '妻の振り分け先を追加' : 'やりくり費の内訳を追加';
-  document.getElementById('modal-name').value = '';
-  document.getElementById('modal-amount').value = '';
-  document.getElementById('modal-overlay').classList.add('open');
-}
+// ========== 初期化 ==========
+document.addEventListener('DOMContentLoaded', function() {
+  updateMonthLabel();
+  initSalaryPage();
 
-function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('open');
-}
+  // ナビゲーション
+  var navBtns = document.querySelectorAll('.nav-btn');
+  for (var i = 0; i < navBtns.length; i++) {
+    (function(btn) {
+      btn.addEventListener('click', function() { switchPage(btn.getAttribute('data-page')); });
+    })(navBtns[i]);
+  }
+
+  // 月切り替え
+  el('prev-month').addEventListener('click', function() {
+    currentMonth--;
+    if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+    updateMonthLabel();
+    initSalaryPage();
+  });
+  el('next-month').addEventListener('click', function() {
+    currentMonth++;
+    if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+    updateMonthLabel();
+    initSalaryPage();
+  });
+
+  // 給料日ページの入力イベント
+  el('income-husband').addEventListener('input', function() { calcSalary(getSetupFromDOM()); });
+  el('wife-income').addEventListener('input', function() { calcWife(getSetupFromDOM()); });
+  el('wife-child-allowance').addEventListener('input', function() { calcWife(getSetupFromDOM()); });
+
+  el('fixed-expenses-list').addEventListener('input', function() { calcSalary(getSetupFromDOM()); });
+  el('savings-list').addEventListener('input', function() { calcSalary(getSetupFromDOM()); });
+  el('budget-categories-list').addEventListener('input', function() { calcSalary(getSetupFromDOM()); });
+  el('wife-allocation-list').addEventListener('input', function() { calcWife(getSetupFromDOM()); });
+
+  // 削除・追加ボタン
+  document.querySelector('.app-main').addEventListener('click', function(e) {
+    var target = e.target;
+
+    // 固定費・貯金・内訳・妻の削除
+    if (target.classList.contains('delete-btn') && target.getAttribute('data-t')) {
+      var type  = target.getAttribute('data-t');
+      var index = parseInt(target.getAttribute('data-i'), 10);
+      var s = getSetupFromDOM();
+      var keyMap = { fixed: 'fixed', sav: 'savings', bud: 'budgets', wife: 'wifeAlloc' };
+      s[keyMap[type]].splice(index, 1);
+      saveData('setup', s);
+      initSalaryPage();
+    }
+
+    // 支出履歴の削除
+    if (target.classList.contains('tx-delete')) {
+      deleteTransaction(target.getAttribute('data-id'));
+    }
+  });
+
+  // 項目追加ボタン
+  el('add-fixed-btn').addEventListener('click', function() { openModal('fixed'); });
+  el('add-savings-btn').addEventListener('click', function() { openModal('sav'); });
+  el('add-budget-btn').addEventListener('click', function() { openModal('bud'); });
+  el('add-wife-allocation-btn').addEventListener('click', function() { openModal('wife'); });
+
+  // モーダル保存
+  el('modal-cancel').addEventListener('click', closeModal);
+  el('modal-overlay').addEventListener('click', function(e) { if (e.target === e.currentTarget) closeModal(); });
+  el('modal-save').addEventListener('click', function() {
+    var name = el('modal-name').value.trim();
+    var amount = parseInt(el('modal-amount').value, 10) || 0;
+    if (!name) { alert('項目名を入力してください'); return; }
+    var s = getSetupFromDOM();
+    var keyMap = { fixed: 'fixed', sav: 'savings', bud: 'budgets', wife: 'wifeAlloc' };
+    s[keyMap[modalMode]].push({ name: name, amount: amount });
+    saveData('setup', s);
+    closeModal();
+    initSalaryPage();
+  });
+
+  // 給料日保存
+  el('save-salary-btn').addEventListener('click', function() {
+    saveData('setup', getSetupFromDOM());
+    var notice = el('save-notice');
+    notice.textContent = '✅ 保存しました！';
+    setTimeout(function() { notice.textContent = ''; }, 2000);
+  });
+
+  // 支出追加
+  el('add-tx-btn').addEventListener('click', addTransaction);
+
+  // 支払方法編集
+  el('edit-payment-btn').addEventListener('click', function() {
+    renderPaymentModalList();
+    el('payment-modal-overlay').classList.add('open');
+  });
+  el('payment-modal-close').addEventListener('click', function() {
+    el('payment-modal-overlay').classList.remove('open');
+    renderPaymentSelect();
+  });
+  el('payment-modal-overlay').addEventListener('click', function(e) {
+    if (e.target === e.currentTarget) { el('payment-modal-overlay').classList.remove('open'); renderPaymentSelect(); }
+  });
+  el('add-payment-confirm').addEventListener('click', function() {
+    var input = el('new-payment-input');
+    var name = input.value.trim();
+    if (!name) return;
+    var methods = loadPayments();
+    methods.push(name);
+    savePayments(methods);
+    input.value = '';
+    renderPaymentModalList();
+  });
+  el('payment-methods-list').addEventListener('input', function(e) {
+    var pi = e.target.getAttribute('data-pi');
+    if (pi !== null) {
+      var methods = loadPayments();
+      methods[parseInt(pi, 10)] = e.target.value;
+      savePayments(methods);
+    }
+  });
+  el('payment-methods-list').addEventListener('click', function(e) {
+    if (e.target.classList.contains('delete-btn')) {
+      var pi = e.target.getAttribute('data-pi');
+      if (pi !== null) {
+        var methods = loadPayments();
+        methods.splice(parseInt(pi, 10), 1);
+        savePayments(methods);
+        renderPaymentModalList();
+      }
+    }
+  });
+
+  // エクスポート
+  el('export-btn').addEventListener('click', function() {
+    el('export-text').value = exportData();
+    el('export-modal-overlay').classList.add('open');
+  });
+  el('export-copy-btn').addEventListener('click', function() {
+    var txt = el('export-text');
+    txt.select();
+    try {
+      document.execCommand('copy');
+      el('export-copy-btn').textContent = '✅ コピーしました';
+      setTimeout(function() { el('export-copy-btn').textContent = 'コピーする'; }, 2000);
+    } catch (e) {}
+  });
+  el('export-close-btn').addEventListener('click', function() { el('export-modal-overlay').classList.remove('open'); });
+
+  // インポート
+  el('import-btn').addEventListener('click', function() {
+    el('import-text').value = '';
+    el('import-modal-overlay').classList.add('open');
+  });
+  el('import-cancel-btn').addEventListener('click', function() { el('import-modal-overlay').classList.remove('open'); });
+  el('import-confirm-btn').addEventListener('click', function() {
+    var text = el('import-text').value.trim();
+    if (!text) { alert('データを貼り付けてください'); return; }
+    if (importData(text)) {
+      el('import-modal-overlay').classList.remove('open');
+      alert('✅ 読み込みが完了しました！');
+      initSalaryPage();
+    } else {
+      alert('データの形式が正しくありません');
+    }
+  });
+});
