@@ -48,10 +48,33 @@
         <!-- 2. 固定費 -->
         <div class="card">
           <h3 class="section-title">2. 固定費（引落し確認）</h3>
-          <div id="fixed-expenses-list"></div>
-          <button class="add-btn" id="add-fixed-btn">＋ 項目を追加</button>
-          <div class="total-row">
-            <span>固定費合計</span>
+
+          <div class="fixed-group-label">夫口座引き落とし</div>
+          <div id="fixed-husband-list"></div>
+          <button class="add-btn" id="add-fixed-husband-btn">＋ 追加</button>
+          <div class="subtotal-row">
+            <span>小計①</span>
+            <span id="subtotal-fixed-husband" class="subtotal-amount">0円</span>
+          </div>
+
+          <div class="fixed-group-label">妻口座引き落とし</div>
+          <div id="fixed-wife-list"></div>
+          <button class="add-btn" id="add-fixed-wife-btn">＋ 追加</button>
+          <div class="subtotal-row">
+            <span>小計②</span>
+            <span id="subtotal-fixed-wife" class="subtotal-amount">0円</span>
+          </div>
+
+          <div class="fixed-group-label">現金振分け</div>
+          <div id="fixed-cash-list"></div>
+          <button class="add-btn" id="add-fixed-cash-btn">＋ 追加</button>
+          <div class="subtotal-row">
+            <span>小計③</span>
+            <span id="subtotal-fixed-cash" class="subtotal-amount">0円</span>
+          </div>
+
+          <div class="total-row" style="border-top:2px solid var(--primary);margin-top:12px;">
+            <span>固定費合計（①+②+③）</span>
             <span id="total-fixed" class="total-amount">0円</span>
           </div>
         </div>
@@ -89,13 +112,10 @@
         <!-- 5. 現金引き出し -->
         <div class="card">
           <h3 class="section-title">5. 現金をいくら引き出す？</h3>
-          <div class="input-row">
-            <label>現金引き出し額</label>
-            <div class="input-with-unit">
-              <input type="number" id="cash-withdrawal" placeholder="0" inputmode="numeric">
-              <span>円</span>
-            </div>
-          </div>
+          <div class="calc-row"><span>夫の給与</span><span id="cash-calc-husband">0円</span></div>
+          <div class="calc-row minus"><span>－ 夫口座引き落とし（小計①）</span><span id="cash-calc-fixed-h">0円</span></div>
+          <div class="calc-divider"></div>
+          <div class="calc-row result"><span>現金引き出し額</span><span id="cash-withdrawal-auto" class="highlight-amount">0円</span></div>
         </div>
 
         <!-- 6. 妻の収入振り分け -->
@@ -168,10 +188,13 @@
           </div>
           <div class="input-row">
             <label>支払方法</label>
-            <div style="display:flex;gap:6px;flex:1;">
-              <select id="tx-payment" style="flex:1;"></select>
-              <button class="edit-payment-btn" id="edit-payment-btn" title="支払方法を編集">⚙️</button>
-            </div>
+            <select id="tx-payment">
+              <option value="PayPay">PayPay</option>
+              <option value="楽天Pay">楽天Pay</option>
+              <option value="クレカ">クレカ</option>
+              <option value="現金">現金</option>
+              <option value="その他">その他</option>
+            </select>
           </div>
           <div class="input-row">
             <label>金額</label>
@@ -203,7 +226,7 @@
           <div id="monthly-categories"></div>
         </div>
         <div class="card">
-          <h2 class="card-title">💳 支払方法別 合計</h2>
+          <h2 class="card-title">💳 支払方法別 集計</h2>
           <div id="monthly-payments"></div>
         </div>
       </div>
@@ -219,12 +242,6 @@
         <div class="card">
           <h2 class="card-title">💰 月別 貯蓄額</h2>
           <div id="annual-savings"></div>
-        </div>
-        <div class="card">
-          <h2 class="card-title">🔄 データ共有</h2>
-          <p class="income-note" style="margin-bottom:12px;">家族間でデータを共有できます。LINEなどで送ってください。</p>
-          <button class="save-btn" id="export-btn" style="margin-bottom:10px;">📤 データを書き出す</button>
-          <button class="save-btn" id="import-btn" style="background:var(--secondary);">📥 データを読み込む</button>
         </div>
       </div>
     </section>
@@ -269,48 +286,6 @@
       <div class="modal-buttons">
         <button class="modal-cancel" id="modal-cancel">キャンセル</button>
         <button class="modal-save" id="modal-save">追加</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- エクスポートモーダル -->
-  <div class="modal-overlay" id="export-modal-overlay">
-    <div class="modal">
-      <h3>📤 データを書き出す</h3>
-      <p style="font-size:13px;color:#666;margin-bottom:10px;">下のテキストを全部コピーしてLINEなどで送ってください。</p>
-      <textarea id="export-text" readonly style="width:100%;height:160px;border:1.5px solid #eee;border-radius:8px;padding:10px;font-size:12px;background:#f5f5f5;resize:none;"></textarea>
-      <div class="modal-buttons">
-        <button class="modal-cancel" id="export-copy-btn">コピーする</button>
-        <button class="modal-save" id="export-close-btn">閉じる</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- インポートモーダル -->
-  <div class="modal-overlay" id="import-modal-overlay">
-    <div class="modal">
-      <h3>📥 データを読み込む</h3>
-      <p style="font-size:13px;color:#666;margin-bottom:10px;">受け取ったテキストを下に貼り付けてください。</p>
-      <textarea id="import-text" placeholder="ここに貼り付ける" style="width:100%;height:160px;border:1.5px solid #eee;border-radius:8px;padding:10px;font-size:12px;background:#f5f5f5;resize:none;"></textarea>
-      <p style="font-size:12px;color:var(--red);margin-top:6px;">⚠️ 現在のデータは上書きされます</p>
-      <div class="modal-buttons">
-        <button class="modal-cancel" id="import-cancel-btn">キャンセル</button>
-        <button class="modal-save" id="import-confirm-btn">読み込む</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 支払方法編集モーダル -->
-  <div class="modal-overlay" id="payment-modal-overlay">
-    <div class="modal">
-      <h3>支払方法の編集</h3>
-      <div id="payment-methods-list"></div>
-      <div class="input-row" style="margin-top:10px;">
-        <input type="text" id="new-payment-input" placeholder="新しい支払方法を入力" style="flex:1;border:1.5px solid #eee;border-radius:8px;padding:8px 10px;font-size:14px;background:#f5f5f5;">
-        <button class="modal-save" id="add-payment-confirm" style="width:60px;margin-left:6px;">追加</button>
-      </div>
-      <div class="modal-buttons">
-        <button class="modal-save" id="payment-modal-close" style="width:100%;">完了</button>
       </div>
     </div>
   </div>
