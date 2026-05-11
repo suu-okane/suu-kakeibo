@@ -234,7 +234,6 @@ function calcSalary(setup) {
   const husbandIncome = setup.income.husband || 0;
   const yariyakuri = husbandIncome - totalFixed - totalSavings;
 
-  document.getElementById('total-income').textContent = fmt(totalIncome);
   document.getElementById('total-fixed').textContent = fmt(totalFixed);
   document.getElementById('total-savings').textContent = fmt(totalSavings);
   document.getElementById('calc-husband').textContent = fmt(husbandIncome);
