@@ -1,5 +1,38 @@
 'use strict';
 
+// ========== 支払方法 ==========
+const DEFAULT_PAYMENTS = ['クレカ', '現金', '電子マネー'];
+
+function loadPayments() {
+  const raw = localStorage.getItem('kakeibo_payments');
+  return raw ? JSON.parse(raw) : [...DEFAULT_PAYMENTS];
+}
+
+function savePayments(list) {
+  localStorage.setItem('kakeibo_payments', JSON.stringify(list));
+}
+
+function renderPaymentSelect() {
+  const sel = document.getElementById('tx-payment');
+  const methods = loadPayments();
+  sel.innerHTML = methods.map(m => `<option value="${m}">${m}</option>`).join('');
+}
+
+function renderPaymentModalList() {
+  const el = document.getElementById('payment-methods-list');
+  const methods = loadPayments();
+  el.innerHTML = '';
+  methods.forEach((m, i) => {
+    const row = document.createElement('div');
+    row.className = 'expense-item';
+    row.innerHTML = `
+      <input type="text" value="${m}" data-payment-index="${i}" style="flex:1;border:1.5px solid #eee;border-radius:8px;padding:7px 10px;font-size:14px;background:#f5f5f5;">
+      <button class="delete-btn" data-payment-index="${i}">×</button>
+    `;
+    el.appendChild(row);
+  });
+}
+
 // ========== デフォルト設定（すぅさんの家計簿から） ==========
 const DEFAULT_FIXED = [
   { name: '住宅ローン', amount: 83606 },
@@ -246,6 +279,9 @@ function initSpendingPage() {
     sel.appendChild(opt);
   });
 
+  // 支払方法
+  renderPaymentSelect();
+
   renderCategorySummary(setup, txs);
   renderTxList(txs);
 }
@@ -403,6 +439,41 @@ function initMonthlyPage() {
     `;
     el2.appendChild(div);
   });
+
+  // 支払方法別集計
+  const el3 = document.getElementById('monthly-payments');
+  el3.innerHTML = '';
+  if (txs.length === 0) {
+    el3.innerHTML = '<p class="empty-message">まだ支出がありません</p>';
+  } else {
+    const paymentTotals = {};
+    txs.forEach(t => {
+      paymentTotals[t.payment] = (paymentTotals[t.payment] || 0) + t.amount;
+    });
+    const grandTotal = txs.reduce((a, t) => a + t.amount, 0);
+    Object.entries(paymentTotals)
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([method, total]) => {
+        const pct = Math.round((total / grandTotal) * 100);
+        const div = document.createElement('div');
+        div.className = 'payment-summary-row';
+        div.innerHTML = `
+          <div class="payment-summary-header">
+            <span class="payment-badge">${method}</span>
+            <span class="payment-amount">${fmt(total)}</span>
+            <span class="payment-pct">${pct}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill ok" style="width:${pct}%"></div>
+          </div>
+        `;
+        el3.appendChild(div);
+      });
+    const totalRow = document.createElement('div');
+    totalRow.className = 'summary-row total';
+    totalRow.innerHTML = `<span>合計</span><span>${fmt(grandTotal)}</span>`;
+    el3.appendChild(totalRow);
+  }
 }
 
 // ========== 年間ページ ==========
@@ -543,9 +614,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 収入入力で自動計算
-  ['income-husband', 'income-wife', 'income-child-allowance', 'income-other'].forEach(id => {
-    document.getElementById(id).addEventListener('input', () => calcSalary(getSetupFromDOM()));
-  });
+  document.getElementById('income-husband').addEventListener('input', () => calcSalary(getSetupFromDOM()));
 
   // 固定費・貯金の入力で自動計算
   document.getElementById('fixed-expenses-list').addEventListener('input', () => calcSalary(getSetupFromDOM()));
@@ -605,7 +674,123 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 支出追加
   document.getElementById('add-tx-btn').addEventListener('click', addTransaction);
+
+  // エクスポート
+  document.getElementById('export-btn').addEventListener('click', () => {
+    document.getElementById('export-text').value = exportData();
+    document.getElementById('export-modal-overlay').classList.add('open');
+  });
+
+  document.getElementById('export-copy-btn').addEventListener('click', () => {
+    const text = document.getElementById('export-text');
+    text.select();
+    navigator.clipboard.writeText(text.value).then(() => {
+      document.getElementById('export-copy-btn').textContent = '✅ コピーしました';
+      setTimeout(() => {
+        document.getElementById('export-copy-btn').textContent = 'コピーする';
+      }, 2000);
+    });
+  });
+
+  document.getElementById('export-close-btn').addEventListener('click', () => {
+    document.getElementById('export-modal-overlay').classList.remove('open');
+  });
+
+  // インポート
+  document.getElementById('import-btn').addEventListener('click', () => {
+    document.getElementById('import-text').value = '';
+    document.getElementById('import-modal-overlay').classList.add('open');
+  });
+
+  document.getElementById('import-cancel-btn').addEventListener('click', () => {
+    document.getElementById('import-modal-overlay').classList.remove('open');
+  });
+
+  document.getElementById('import-confirm-btn').addEventListener('click', () => {
+    const text = document.getElementById('import-text').value.trim();
+    if (!text) { alert('データを貼り付けてください'); return; }
+    const ok = importData(text);
+    if (ok) {
+      document.getElementById('import-modal-overlay').classList.remove('open');
+      alert('✅ 読み込みが完了しました！');
+      initSalaryPage();
+    } else {
+      alert('データの形式が正しくありません');
+    }
+  });
+
+  // 支払方法編集
+  document.getElementById('edit-payment-btn').addEventListener('click', () => {
+    renderPaymentModalList();
+    document.getElementById('payment-modal-overlay').classList.add('open');
+  });
+
+  document.getElementById('payment-modal-close').addEventListener('click', () => {
+    document.getElementById('payment-modal-overlay').classList.remove('open');
+    renderPaymentSelect();
+  });
+
+  document.getElementById('payment-modal-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) {
+      document.getElementById('payment-modal-overlay').classList.remove('open');
+      renderPaymentSelect();
+    }
+  });
+
+  document.getElementById('add-payment-confirm').addEventListener('click', () => {
+    const input = document.getElementById('new-payment-input');
+    const name = input.value.trim();
+    if (!name) return;
+    const methods = loadPayments();
+    methods.push(name);
+    savePayments(methods);
+    input.value = '';
+    renderPaymentModalList();
+  });
+
+  document.getElementById('payment-methods-list').addEventListener('input', e => {
+    if (e.target.dataset.paymentIndex !== undefined) {
+      const methods = loadPayments();
+      methods[parseInt(e.target.dataset.paymentIndex)] = e.target.value;
+      savePayments(methods);
+    }
+  });
+
+  document.getElementById('payment-methods-list').addEventListener('click', e => {
+    if (e.target.classList.contains('delete-btn') && e.target.dataset.paymentIndex !== undefined) {
+      const methods = loadPayments();
+      methods.splice(parseInt(e.target.dataset.paymentIndex), 1);
+      savePayments(methods);
+      renderPaymentModalList();
+    }
+  });
 });
+
+// ========== エクスポート・インポート ==========
+function exportData() {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith('kakeibo_')) {
+      data[key] = JSON.parse(localStorage.getItem(key));
+    }
+  }
+  return JSON.stringify(data);
+}
+
+function importData(jsonStr) {
+  try {
+    const data = JSON.parse(jsonStr);
+    Object.entries(data).forEach(([key, val]) => {
+      if (key.startsWith('kakeibo_')) {
+        localStorage.setItem(key, JSON.stringify(val));
+      }
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function openModal(mode) {
   modalMode = mode;
