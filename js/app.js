@@ -24,8 +24,9 @@ var DEFAULT_FIXED_C = [
 
 var DEFAULT_SAVINGS = [
   { name: '医療費積立', amount: 3000 },
-  { name: 'お米貯金', amount: 3000 },
-  { name: '特別費貯金', amount: 25000 },
+  { name: 'ありがとう貯金', amount: 2000 },
+  { name: 'お米積立', amount: 3000 },
+  { name: '特別費積立', amount: 25000 },
 ];
 
 var DEFAULT_WIFE_ALLOC = [
