@@ -103,7 +103,8 @@ function fmt(n) {
 }
 
 function num(id) {
-  return parseInt(document.getElementById(id)?.value || '0', 10) || 0;
+  var el = document.getElementById(id);
+  return parseInt((el ? el.value : '0') || '0', 10) || 0;
 }
 
 // ========== 月ラベル更新 ==========
@@ -271,7 +272,7 @@ function initSpendingPage() {
   // カテゴリ選択
   const sel = document.getElementById('tx-category');
   sel.innerHTML = '';
-  const cats = setup?.budgets || DEFAULT_BUDGETS;
+  const cats = (setup && setup.budgets) || DEFAULT_BUDGETS;
   cats.forEach(c => {
     const opt = document.createElement('option');
     opt.value = c.name;
@@ -289,7 +290,7 @@ function initSpendingPage() {
 function renderCategorySummary(setup, txs) {
   const el = document.getElementById('category-summary');
   el.innerHTML = '';
-  const cats = setup?.budgets || DEFAULT_BUDGETS;
+  const cats = (setup && setup.budgets) || DEFAULT_BUDGETS;
 
   cats.forEach(cat => {
     const spent = txs
@@ -572,8 +573,10 @@ function initAnnualPage() {
 function switchPage(pageName) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById(`page-${pageName}`)?.classList.add('active');
-  document.querySelector(`.nav-btn[data-page="${pageName}"]`)?.classList.add('active');
+  var pageEl = document.getElementById('page-' + pageName);
+  if (pageEl) pageEl.classList.add('active');
+  var navEl = document.querySelector('.nav-btn[data-page="' + pageName + '"]');
+  if (navEl) navEl.classList.add('active');
 
   document.getElementById('header-title').textContent = {
     salary: '💰 給料日の設定',
