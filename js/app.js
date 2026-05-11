@@ -84,13 +84,16 @@ function loadMonth(type, y, m, def) {
 
 function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
 
-// 月をまたいだ固定費合計（新旧両データ構造に対応）
+// 月をまたいだ固定費合計（新旧両データ構造に対応・二重計上しない）
 function getTotalFixed(s) {
   var total = 0;
-  if (s.fixedH) { for (var i = 0; i < s.fixedH.length; i++) total += (s.fixedH[i].amount || 0); }
-  if (s.fixedW) { for (var i = 0; i < s.fixedW.length; i++) total += (s.fixedW[i].amount || 0); }
-  if (s.fixedC) { for (var i = 0; i < s.fixedC.length; i++) total += (s.fixedC[i].amount || 0); }
-  if (s.fixed)  { for (var i = 0; i < s.fixed.length;  i++) total += (s.fixed[i].amount  || 0); }
+  if (s.fixedH || s.fixedW || s.fixedC) {
+    if (s.fixedH) { for (var i = 0; i < s.fixedH.length; i++) total += (s.fixedH[i].amount || 0); }
+    if (s.fixedW) { for (var i = 0; i < s.fixedW.length; i++) total += (s.fixedW[i].amount || 0); }
+    if (s.fixedC) { for (var i = 0; i < s.fixedC.length; i++) total += (s.fixedC[i].amount || 0); }
+  } else if (s.fixed) {
+    for (var i = 0; i < s.fixed.length; i++) total += (s.fixed[i].amount || 0);
+  }
   return total;
 }
 
@@ -208,6 +211,7 @@ function getSetupFromDOM() {
   if (!s.fixedW) s.fixedW = [];
   if (!s.fixedC) s.fixedC = [];
 
+  if (s.fixed) delete s.fixed;
   s.husband   = numVal('income-husband');
   s.wifeIncome = numVal('wife-income');
   s.wifeChild  = numVal('wife-child-allowance');
