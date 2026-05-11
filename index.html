@@ -168,13 +168,10 @@
           </div>
           <div class="input-row">
             <label>支払方法</label>
-            <select id="tx-payment">
-              <option value="PayPay">PayPay</option>
-              <option value="楽天Pay">楽天Pay</option>
-              <option value="クレカ">クレカ</option>
-              <option value="現金">現金</option>
-              <option value="その他">その他</option>
-            </select>
+            <div style="display:flex;gap:6px;flex:1;">
+              <select id="tx-payment" style="flex:1;"></select>
+              <button class="edit-payment-btn" id="edit-payment-btn" title="支払方法を編集">⚙️</button>
+            </div>
           </div>
           <div class="input-row">
             <label>金額</label>
@@ -205,6 +202,10 @@
           <h2 class="card-title">📈 カテゴリ別 予算vs実績</h2>
           <div id="monthly-categories"></div>
         </div>
+        <div class="card">
+          <h2 class="card-title">💳 支払方法別 合計</h2>
+          <div id="monthly-payments"></div>
+        </div>
       </div>
     </section>
 
@@ -218,6 +219,12 @@
         <div class="card">
           <h2 class="card-title">💰 月別 貯蓄額</h2>
           <div id="annual-savings"></div>
+        </div>
+        <div class="card">
+          <h2 class="card-title">🔄 データ共有</h2>
+          <p class="income-note" style="margin-bottom:12px;">家族間でデータを共有できます。LINEなどで送ってください。</p>
+          <button class="save-btn" id="export-btn" style="margin-bottom:10px;">📤 データを書き出す</button>
+          <button class="save-btn" id="import-btn" style="background:var(--secondary);">📥 データを読み込む</button>
         </div>
       </div>
     </section>
@@ -262,6 +269,48 @@
       <div class="modal-buttons">
         <button class="modal-cancel" id="modal-cancel">キャンセル</button>
         <button class="modal-save" id="modal-save">追加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- エクスポートモーダル -->
+  <div class="modal-overlay" id="export-modal-overlay">
+    <div class="modal">
+      <h3>📤 データを書き出す</h3>
+      <p style="font-size:13px;color:#666;margin-bottom:10px;">下のテキストを全部コピーしてLINEなどで送ってください。</p>
+      <textarea id="export-text" readonly style="width:100%;height:160px;border:1.5px solid #eee;border-radius:8px;padding:10px;font-size:12px;background:#f5f5f5;resize:none;"></textarea>
+      <div class="modal-buttons">
+        <button class="modal-cancel" id="export-copy-btn">コピーする</button>
+        <button class="modal-save" id="export-close-btn">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- インポートモーダル -->
+  <div class="modal-overlay" id="import-modal-overlay">
+    <div class="modal">
+      <h3>📥 データを読み込む</h3>
+      <p style="font-size:13px;color:#666;margin-bottom:10px;">受け取ったテキストを下に貼り付けてください。</p>
+      <textarea id="import-text" placeholder="ここに貼り付ける" style="width:100%;height:160px;border:1.5px solid #eee;border-radius:8px;padding:10px;font-size:12px;background:#f5f5f5;resize:none;"></textarea>
+      <p style="font-size:12px;color:var(--red);margin-top:6px;">⚠️ 現在のデータは上書きされます</p>
+      <div class="modal-buttons">
+        <button class="modal-cancel" id="import-cancel-btn">キャンセル</button>
+        <button class="modal-save" id="import-confirm-btn">読み込む</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 支払方法編集モーダル -->
+  <div class="modal-overlay" id="payment-modal-overlay">
+    <div class="modal">
+      <h3>支払方法の編集</h3>
+      <div id="payment-methods-list"></div>
+      <div class="input-row" style="margin-top:10px;">
+        <input type="text" id="new-payment-input" placeholder="新しい支払方法を入力" style="flex:1;border:1.5px solid #eee;border-radius:8px;padding:8px 10px;font-size:14px;background:#f5f5f5;">
+        <button class="modal-save" id="add-payment-confirm" style="width:60px;margin-left:6px;">追加</button>
+      </div>
+      <div class="modal-buttons">
+        <button class="modal-save" id="payment-modal-close" style="width:100%;">完了</button>
       </div>
     </div>
   </div>
