@@ -125,7 +125,7 @@ function initSalaryPage() {
     cashWithdrawal: 0,
   });
 
-  document.getElementById('income-husband').value = setup.income.husband || '';
+  document.getElementById('income-husband').value = setup.income.husband > 0 ? setup.income.husband : '';
   document.getElementById('cash-withdrawal').value = setup.cashWithdrawal || '';
   document.getElementById('wife-income').value = setup.wifeIncome || '';
   document.getElementById('wife-child-allowance').value = setup.wifeChildAllowance || '';
@@ -787,7 +787,7 @@ function importData(jsonStr) {
       }
     });
     return true;
-  } catch {
+  } catch(e) {
     return false;
   }
 }
