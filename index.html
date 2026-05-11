@@ -188,13 +188,8 @@
           </div>
           <div class="input-row">
             <label>支払方法</label>
-            <select id="tx-payment">
-              <option value="PayPay">PayPay</option>
-              <option value="楽天Pay">楽天Pay</option>
-              <option value="クレカ">クレカ</option>
-              <option value="現金">現金</option>
-              <option value="その他">その他</option>
-            </select>
+            <select id="tx-payment"></select>
+            <button id="edit-payment-btn" style="flex-shrink:0;background:var(--primary-light);color:var(--primary);border:none;border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;">編集</button>
           </div>
           <div class="input-row">
             <label>金額</label>
@@ -286,6 +281,21 @@
       <div class="modal-buttons">
         <button class="modal-cancel" id="modal-cancel">キャンセル</button>
         <button class="modal-save" id="modal-save">追加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- モーダル：支払方法編集 -->
+  <div class="modal-overlay" id="payment-modal-overlay">
+    <div class="modal">
+      <h3>支払方法を編集</h3>
+      <div id="payment-methods-list"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <input type="text" id="new-payment-input" placeholder="新しい支払方法" style="flex:1;border:1.5px solid #eee;border-radius:8px;padding:8px 10px;font-size:14px;">
+        <button id="add-payment-confirm" style="background:var(--primary);color:white;border:none;border-radius:8px;padding:8px 12px;font-size:14px;cursor:pointer;">追加</button>
+      </div>
+      <div class="modal-buttons">
+        <button class="modal-save" id="payment-modal-close">閉じる</button>
       </div>
     </div>
   </div>
