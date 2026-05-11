@@ -1,0 +1,698 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+  --primary: #4a8fd4;
+  --primary-light: #e0eef9;
+  --secondary: #6ab0e0;
+  --secondary-light: #d6ecf8;
+  --green: #6dbf8b;
+  --green-light: #e6f7ed;
+  --yellow: #f5c842;
+  --yellow-light: #fffbe6;
+  --red: #e05555;
+  --red-light: #fdeaea;
+  --gray: #888;
+  --gray-light: #f5f5f5;
+  --border: #eee;
+  --text: #333;
+  --text-light: #666;
+  --header-h: 56px;
+  --nav-h: 64px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+  background: #f7f7f7;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ヘッダー */
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--header-h);
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.app-header h1 {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+#header-month {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* メイン */
+.app-main {
+  padding-top: var(--header-h);
+  padding-bottom: var(--nav-h);
+  min-height: 100vh;
+}
+
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+}
+
+.page-scroll {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* カード */
+.card {
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.salary-title {
+  text-align: center;
+  font-size: 17px;
+}
+
+/* 月セレクター */
+.month-selector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 4px;
+}
+
+.month-btn {
+  background: var(--primary-light);
+  color: var(--primary);
+  border: none;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#current-month-label {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.income-note {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* セクションタイトル */
+.section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--primary-light);
+}
+
+/* 入力行 */
+.input-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+
+.input-row label {
+  width: 90px;
+  font-size: 14px;
+  color: var(--text-light);
+  flex-shrink: 0;
+}
+
+.input-row input,
+.input-row select {
+  flex: 1;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--gray-light);
+  -webkit-appearance: none;
+  width: 100%;
+}
+
+.input-row input:focus,
+.input-row select:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: white;
+}
+
+.input-with-unit {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 6px;
+}
+
+.input-with-unit input {
+  flex: 1;
+  text-align: right;
+}
+
+.input-with-unit span {
+  font-size: 14px;
+  color: var(--text-light);
+  flex-shrink: 0;
+}
+
+/* 合計行 */
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1.5px solid var(--border);
+  font-weight: 700;
+}
+
+.total-amount {
+  color: var(--primary);
+  font-size: 17px;
+}
+
+/* 固定費・貯金リスト */
+.expense-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.expense-item input[type="text"] {
+  flex: 1;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 14px;
+  background: var(--gray-light);
+}
+
+.expense-item input[type="number"] {
+  width: 100px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 14px;
+  text-align: right;
+  background: var(--gray-light);
+}
+
+.expense-item input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: white;
+}
+
+.expense-item .unit {
+  font-size: 13px;
+  color: var(--text-light);
+  flex-shrink: 0;
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 4px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.delete-btn:hover {
+  color: var(--red);
+}
+
+.add-btn {
+  width: 100%;
+  background: var(--gray-light);
+  border: 1.5px dashed #ccc;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 14px;
+  color: var(--gray);
+  cursor: pointer;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+/* 計算行 */
+.calc-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 14px;
+}
+
+.calc-row.minus {
+  color: var(--text-light);
+}
+
+.calc-divider {
+  border-top: 1.5px solid var(--border);
+  margin: 4px 0;
+}
+
+.calc-row.result {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.highlight-amount {
+  color: var(--primary);
+  font-size: 18px;
+}
+
+/* 残金通知 */
+.remaining-notice {
+  margin-top: 10px;
+  font-size: 13px;
+  text-align: center;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.remaining-notice.ok {
+  background: var(--green-light);
+  color: var(--green);
+}
+
+.remaining-notice.over {
+  background: var(--red-light);
+  color: var(--red);
+}
+
+/* 保存ボタン */
+.save-btn {
+  width: 100%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(240,128,128,0.3);
+}
+
+.save-btn:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.save-notice {
+  text-align: center;
+  font-size: 14px;
+  color: var(--green);
+  margin-top: 8px;
+  min-height: 20px;
+}
+
+/* カテゴリ残金カード */
+.category-card {
+  margin-bottom: 10px;
+}
+
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.category-name {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.category-remaining {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.category-remaining.ok { color: var(--green); }
+.category-remaining.warning { color: var(--yellow); }
+.category-remaining.danger { color: var(--red); }
+
+.progress-bar {
+  height: 8px;
+  background: var(--gray-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.progress-fill.ok { background: var(--green); }
+.progress-fill.warning { background: var(--yellow); }
+.progress-fill.danger { background: var(--red); }
+
+.category-detail {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-light);
+  margin-top: 4px;
+}
+
+/* 支出入力 */
+#tx-date {
+  flex: 1;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 15px;
+  background: var(--gray-light);
+  -webkit-appearance: none;
+}
+
+/* 支出履歴 */
+.tx-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+}
+
+.tx-item:last-child {
+  border-bottom: none;
+}
+
+.tx-category-badge {
+  font-size: 11px;
+  padding: 3px 7px;
+  border-radius: 10px;
+  background: var(--primary-light);
+  color: var(--primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tx-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tx-store {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tx-meta {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+.tx-amount {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.tx-delete {
+  background: none;
+  border: none;
+  color: #ddd;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.tx-delete:hover {
+  color: var(--red);
+}
+
+.empty-message {
+  text-align: center;
+  color: var(--text-light);
+  font-size: 14px;
+  padding: 20px 0;
+}
+
+/* 月次サマリー */
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+}
+
+.summary-row:last-child { border-bottom: none; }
+.summary-row.total { font-weight: 700; font-size: 16px; }
+.summary-row.saving { color: var(--green); font-weight: 700; }
+
+.budget-vs-actual {
+  margin-bottom: 12px;
+}
+
+.bva-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.bva-name { flex: 1; }
+.bva-numbers { text-align: right; font-size: 13px; color: var(--text-light); }
+.bva-over { color: var(--red); font-weight: 700; }
+.bva-under { color: var(--green); }
+
+/* 年間 */
+.annual-month-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.annual-month-row:last-child { border-bottom: none; }
+
+.annual-month { color: var(--text-light); width: 48px; }
+.annual-income { text-align: right; flex: 1; }
+.annual-expense { text-align: right; flex: 1; color: var(--text-light); }
+.annual-saving { text-align: right; flex: 1; font-weight: 700; color: var(--green); }
+
+.annual-total-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  font-weight: 700;
+  font-size: 16px;
+  border-top: 2px solid var(--border);
+  margin-top: 4px;
+}
+
+.saving-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.saving-bar-label {
+  width: 40px;
+  font-size: 13px;
+  color: var(--text-light);
+  flex-shrink: 0;
+}
+
+.saving-bar {
+  flex: 1;
+  height: 20px;
+  background: var(--gray-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.saving-bar-fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 4px;
+  min-width: 2px;
+}
+
+.saving-bar-amount {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+  white-space: nowrap;
+  width: 70px;
+  text-align: right;
+}
+
+/* ボトムナビ */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-h);
+  background: white;
+  display: flex;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+  z-index: 100;
+}
+
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  gap: 3px;
+  padding: 8px 0;
+  color: var(--gray);
+  transition: color 0.2s;
+}
+
+.nav-btn.active {
+  color: var(--primary);
+}
+
+.nav-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.nav-label {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* モーダル */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+
+.modal h3 {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.modal-cancel {
+  flex: 1;
+  background: var(--gray-light);
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 15px;
+  cursor: pointer;
+  color: var(--text-light);
+}
+
+.modal-save {
+  flex: 1;
+  background: var(--primary);
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  color: white;
+}
+
+/* Safe area for iPhone */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+    height: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  }
+  .app-main {
+    padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  }
+}

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="すぅの家計簿">
+  <title>すぅの家計簿</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ヘッダー -->
+  <header class="app-header">
+    <h1 id="header-title">すぅの家計簿</h1>
+    <span id="header-month"></span>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="app-main">
+
+    <!-- 給料日ページ -->
+    <section id="page-salary" class="page active">
+      <div class="page-scroll">
+        <div class="card">
+          <h2 class="card-title salary-title">💰 給料日の予算設定</h2>
+          <div class="month-selector">
+            <button class="month-btn" id="prev-month">＜</button>
+            <span id="current-month-label"></span>
+            <button class="month-btn" id="next-month">＞</button>
+          </div>
+        </div>
+
+        <!-- 1. 収入 -->
+        <div class="card">
+          <h3 class="section-title">1. 今月の生活費（夫の給与）</h3>
+          <div class="input-row">
+            <label>夫の給与</label>
+            <div class="input-with-unit">
+              <input type="number" id="income-husband" placeholder="0" inputmode="numeric">
+              <span>円</span>
+            </div>
+          </div>
+          <p class="income-note">※妻の収入は投資・貯金へ別管理</p>
+        </div>
+
+        <!-- 2. 固定費 -->
+        <div class="card">
+          <h3 class="section-title">2. 固定費（引落し確認）</h3>
+          <div id="fixed-expenses-list"></div>
+          <button class="add-btn" id="add-fixed-btn">＋ 項目を追加</button>
+          <div class="total-row">
+            <span>固定費合計</span>
+            <span id="total-fixed" class="total-amount">0円</span>
+          </div>
+        </div>
+
+        <!-- 3. 先取り貯金 -->
+        <div class="card">
+          <h3 class="section-title">3. 先取り貯金</h3>
+          <div id="savings-list"></div>
+          <button class="add-btn" id="add-savings-btn">＋ 項目を追加</button>
+          <div class="total-row">
+            <span>先取り貯金合計</span>
+            <span id="total-savings" class="total-amount">0円</span>
+          </div>
+        </div>
+
+        <!-- 4. やりくり費予算 -->
+        <div class="card">
+          <h3 class="section-title">4. やりくり費の予算</h3>
+          <div class="calc-row"><span>夫の給与</span><span id="calc-husband">0円</span></div>
+          <div class="calc-row minus"><span>－ 固定費合計</span><span id="calc-fixed">0円</span></div>
+          <div class="calc-row minus"><span>－ 先取り貯金合計</span><span id="calc-savings">0円</span></div>
+          <div class="calc-divider"></div>
+          <div class="calc-row result"><span>やりくり費</span><span id="calc-budget" class="highlight-amount">0円</span></div>
+
+          <h3 class="section-title" style="margin-top:16px;">内訳</h3>
+          <div id="budget-categories-list"></div>
+          <button class="add-btn" id="add-budget-btn">＋ 項目を追加</button>
+          <div class="total-row">
+            <span>内訳合計</span>
+            <span id="total-budget-categories" class="total-amount">0円</span>
+          </div>
+          <div class="remaining-notice" id="budget-remaining-notice"></div>
+        </div>
+
+        <!-- 5. 現金引き出し -->
+        <div class="card">
+          <h3 class="section-title">5. 現金をいくら引き出す？</h3>
+          <div class="input-row">
+            <label>現金引き出し額</label>
+            <div class="input-with-unit">
+              <input type="number" id="cash-withdrawal" placeholder="0" inputmode="numeric">
+              <span>円</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. 妻の収入振り分け -->
+        <div class="card">
+          <h3 class="section-title">6. 妻の収入振り分け</h3>
+          <div class="input-row">
+            <label>妻の給与</label>
+            <div class="input-with-unit">
+              <input type="number" id="wife-income" placeholder="0" inputmode="numeric">
+              <span>円</span>
+            </div>
+          </div>
+          <div class="input-row">
+            <label>児童手当</label>
+            <div class="input-with-unit">
+              <input type="number" id="wife-child-allowance" placeholder="0" inputmode="numeric">
+              <span>円</span>
+            </div>
+          </div>
+          <div class="total-row" style="margin-bottom:12px;">
+            <span>合計</span>
+            <span id="wife-total" class="total-amount">0円</span>
+          </div>
+
+          <h3 class="section-title">振り分け先（投資・貯金）</h3>
+          <div id="wife-allocation-list"></div>
+          <button class="add-btn" id="add-wife-allocation-btn">＋ 項目を追加</button>
+
+          <div class="calc-divider" style="margin:12px 0;"></div>
+          <div class="calc-row">
+            <span>振り分け合計</span>
+            <span id="wife-allocated-total">0円</span>
+          </div>
+          <div class="calc-row result">
+            <span>残り → 特別費貯金へ</span>
+            <span id="wife-remaining" class="highlight-amount">0円</span>
+          </div>
+        </div>
+
+        <!-- 保存ボタン -->
+        <button class="save-btn" id="save-salary-btn">この月の予算を保存する</button>
+        <div class="save-notice" id="save-notice"></div>
+      </div>
+    </section>
+
+    <!-- やりくりページ -->
+    <section id="page-spending" class="page">
+      <div class="page-scroll">
+
+        <!-- カテゴリ残金サマリー -->
+        <div class="card">
+          <h2 class="card-title">📊 カテゴリ別 残金</h2>
+          <div id="category-summary"></div>
+        </div>
+
+        <!-- 支出入力 -->
+        <div class="card">
+          <h2 class="card-title">➕ 支出を入力</h2>
+          <div class="input-row">
+            <label>日付</label>
+            <input type="date" id="tx-date">
+          </div>
+          <div class="input-row">
+            <label>カテゴリ</label>
+            <select id="tx-category"></select>
+          </div>
+          <div class="input-row">
+            <label>購入先</label>
+            <input type="text" id="tx-store" placeholder="スーパー・ドラッグストアなど">
+          </div>
+          <div class="input-row">
+            <label>支払方法</label>
+            <select id="tx-payment">
+              <option value="PayPay">PayPay</option>
+              <option value="楽天Pay">楽天Pay</option>
+              <option value="クレカ">クレカ</option>
+              <option value="現金">現金</option>
+              <option value="その他">その他</option>
+            </select>
+          </div>
+          <div class="input-row">
+            <label>金額</label>
+            <div class="input-with-unit">
+              <input type="number" id="tx-amount" placeholder="0" inputmode="numeric">
+              <span>円</span>
+            </div>
+          </div>
+          <button class="save-btn" id="add-tx-btn">支出を追加</button>
+        </div>
+
+        <!-- 支出履歴 -->
+        <div class="card">
+          <h2 class="card-title">📋 今月の支出履歴</h2>
+          <div id="tx-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 月次ページ -->
+    <section id="page-monthly" class="page">
+      <div class="page-scroll">
+        <div class="card">
+          <h2 class="card-title">📅 月次まとめ</h2>
+          <div id="monthly-summary"></div>
+        </div>
+        <div class="card">
+          <h2 class="card-title">📈 カテゴリ別 予算vs実績</h2>
+          <div id="monthly-categories"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 年間ページ -->
+    <section id="page-annual" class="page">
+      <div class="page-scroll">
+        <div class="card">
+          <h2 class="card-title">🗓️ 年間収支</h2>
+          <div id="annual-summary"></div>
+        </div>
+        <div class="card">
+          <h2 class="card-title">💰 月別 貯蓄額</h2>
+          <div id="annual-savings"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ボトムナビゲーション -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-page="salary">
+      <span class="nav-icon">💰</span>
+      <span class="nav-label">給料日</span>
+    </button>
+    <button class="nav-btn" data-page="spending">
+      <span class="nav-icon">📝</span>
+      <span class="nav-label">やりくり</span>
+    </button>
+    <button class="nav-btn" data-page="monthly">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">月次</span>
+    </button>
+    <button class="nav-btn" data-page="annual">
+      <span class="nav-icon">🗓️</span>
+      <span class="nav-label">年間</span>
+    </button>
+  </nav>
+
+  <!-- モーダル：項目追加 -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <h3 id="modal-title">項目を追加</h3>
+      <div class="input-row">
+        <label>項目名</label>
+        <input type="text" id="modal-name" placeholder="例：住宅ローン">
+      </div>
+      <div class="input-row">
+        <label>金額</label>
+        <div class="input-with-unit">
+          <input type="number" id="modal-amount" placeholder="0" inputmode="numeric">
+          <span>円</span>
+        </div>
+      </div>
+      <div class="modal-buttons">
+        <button class="modal-cancel" id="modal-cancel">キャンセル</button>
+        <button class="modal-save" id="modal-save">追加</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
